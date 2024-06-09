@@ -97,6 +97,6 @@ public class AlertGenerator {
     private void triggerAlert(Alert alert) {
         System.out.println("Alert Triggered: " + alert.getCondition() + " for Patient ID: " + alert.getPatientId() +
                 " at " + alert.getTimestamp());
-        // Additional logic for handling alert (e.g., logging, notification) can be added here
+        
     }
 }
