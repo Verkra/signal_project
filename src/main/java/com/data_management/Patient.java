@@ -40,4 +40,9 @@ public class Patient {
     public List<PatientRecord> getRecords() {
         return patientRecords;
     }
+
+    public String getPatientId() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getPatientId'");
+    }
 }

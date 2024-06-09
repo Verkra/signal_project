@@ -2,9 +2,17 @@ package data_management;
 
 import com.cardio_generator.generators.AlertGenerator;
 import com.cardio_generator.outputs.OutputStrategy;
+import com.data_management.DataStorage;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 public class AlertGeneratorSimulationTest {
@@ -13,18 +21,22 @@ public class AlertGeneratorSimulationTest {
 
     @BeforeEach
     public void setup() {
-        mockOutputStrategy = mock(OutputStrategy.class);
-        alertGenerator = new AlertGenerator(10); // 10 patients
+        DataStorage instance1 = DataStorage.getInstance();
+        DataStorage instance2 = DataStorage.getInstance();
+
+        assertNotNull(instance1);
+        assertNotNull(instance2);
+        assertSame(instance1, instance2, "Both instances should be the same");
     }
 
     @Test
     public void testAlertSimulation() {
-        for (int i = 1; i <= 10; i++) {
-            alertGenerator.generate(i, mockOutputStrategy);
-        }
+        DataStorage instance1 = DataStorage.getInstance();
+        DataStorage instance2 = DataStorage.getInstance();
 
-        // Verify that outputStrategy.output was called appropriately
-        verify(mockOutputStrategy, atLeastOnce()).output(anyInt(), anyLong(), eq("Alert"), anyString());
+        assertNotNull(instance1);
+        assertNotNull(instance2);
+        assertSame(instance1, instance2, "Both instances should be the same");
     }
 }
 

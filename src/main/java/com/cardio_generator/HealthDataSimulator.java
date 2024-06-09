@@ -4,17 +4,23 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.cardio_generator.generators.AlertGenerator;
-
+import com.alerts.AlertFactory;
+import com.alerts.AlertGenerator;
+import com.alerts.BloodOxygenAlertFactory;
+import com.alerts.BloodPressureAlertFactory;
+import com.alerts.ECGAlertFactory;
+import com.cardio_generator.outputs.*;
 import com.cardio_generator.generators.BloodPressureDataGenerator;
 import com.cardio_generator.generators.BloodSaturationDataGenerator;
 import com.cardio_generator.generators.BloodLevelsDataGenerator;
 import com.cardio_generator.generators.ECGDataGenerator;
-import com.cardio_generator.outputs.ConsoleOutputStrategy;
-import com.cardio_generator.outputs.FileOutputStrategy;
-import com.cardio_generator.outputs.OutputStrategy;
-import com.cardio_generator.outputs.TcpOutputStrategy;
-import com.cardio_generator.outputs.WebSocketOutputStrategy;
+// import com.cardio_generator.outputs.ConsoleOutputStrategy;
+// import com.cardio_generator.outputs.FileOutputStrategy;
+// import com.cardio_generator.outputs.OutputStrategy;
+// import com.cardio_generator.outputs.TcpOutputStrategy;
+// import com.cardio_generator.outputs.WebSocketOutputStrategy;
+import com.data_management.DataStorage;
+import com.data_management.Patient;
 
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +42,21 @@ public class HealthDataSimulator {
     private static ScheduledExecutorService scheduler;
     private static OutputStrategy outputStrategy = new ConsoleOutputStrategy(); // Default output strategy
     private static final Random random = new Random();
+    private static DataStorage dataStorage = DataStorage.getInstance();
+    private static AlertGenerator alertGenerator = new AlertGenerator(dataStorage);
+
+    private static HealthDataSimulator instance;
+
+    private HealthDataSimulator() {
+        // Private constructor to prevent instantiation
+    }
+
+    public static synchronized HealthDataSimulator getInstance() {
+        if (instance == null) {
+            instance = new HealthDataSimulator();
+        }
+        return instance;
+    }
 
     /**
      * The main method to start the simulation.
@@ -47,7 +68,8 @@ public class HealthDataSimulator {
 
     public static void main(String[] args) throws IOException {
 
-        parseArguments(args);
+        HealthDataSimulator simulator = HealthDataSimulator.getInstance();
+        simulator.parseArguments(args);
 
         scheduler = Executors.newScheduledThreadPool(patientCount * 4);
 
@@ -63,7 +85,7 @@ public class HealthDataSimulator {
      * @param args the array of command-line arguments
      * @throws IOException if an error occurs during output directory creation
      */
-    private static void parseArguments(String[] args) throws IOException {
+    private void parseArguments(String[] args) throws IOException {
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "-h":
@@ -75,8 +97,7 @@ public class HealthDataSimulator {
                         try {
                             patientCount = Integer.parseInt(args[++i]);
                         } catch (NumberFormatException e) {
-                            System.err
-                                    .println("Error: Invalid number of patients. Using default value: " + patientCount);
+                            System.err.println("Error: Invalid number of patients. Using default value: " + patientCount);
                         }
                     }
                     break;
@@ -99,8 +120,7 @@ public class HealthDataSimulator {
                                 outputStrategy = new WebSocketOutputStrategy(port);
                                 System.out.println("WebSocket output will be on port: " + port);
                             } catch (NumberFormatException e) {
-                                System.err.println(
-                                        "Invalid port for WebSocket output. Please specify a valid port number.");
+                                System.err.println("Invalid port for WebSocket output. Please specify a valid port number.");
                             }
                         } else if (outputArg.startsWith("tcp:")) {
                             try {
@@ -127,12 +147,11 @@ public class HealthDataSimulator {
     /**
      * Prints usage help for the application.
      */
-    private static void printHelp() {
+    private void printHelp() {
         System.out.println("Usage: java HealthDataSimulator [options]");
         System.out.println("Options:");
         System.out.println("  -h                       Show help and exit.");
-        System.out.println(
-                "  --patient-count <count>  Specify the number of patients to simulate data for (default: 50).");
+        System.out.println("  --patient-count <count>  Specify the number of patients to simulate data for (default: 50).");
         System.out.println("  --output <type>          Define the output method. Options are:");
         System.out.println("                             'console' for console output,");
         System.out.println("                             'file:<directory>' for file output,");
@@ -140,8 +159,7 @@ public class HealthDataSimulator {
         System.out.println("                             'tcp:<port>' for TCP socket output.");
         System.out.println("Example:");
         System.out.println("  java HealthDataSimulator --patient-count 100 --output websocket:8080");
-        System.out.println(
-                "  This command simulates data for 100 patients and sends the output to WebSocket clients connected to port 8080.");
+        System.out.println("  This command simulates data for 100 patients and sends the output to WebSocket clients connected to port 8080.");
     }
 
     /**
@@ -169,7 +187,7 @@ public class HealthDataSimulator {
         BloodSaturationDataGenerator bloodSaturationDataGenerator = new BloodSaturationDataGenerator(patientCount);
         BloodPressureDataGenerator bloodPressureDataGenerator = new BloodPressureDataGenerator(patientCount);
         BloodLevelsDataGenerator bloodLevelsDataGenerator = new BloodLevelsDataGenerator(patientCount);
-        AlertGenerator alertGenerator = new AlertGenerator(patientCount);
+        com.cardio_generator.generators.AlertGenerator alertGenerator = new com.cardio_generator.generators.AlertGenerator(patientCount);
 
         for (int patientId : patientIds) {
             scheduleTask(() -> ecgDataGenerator.generate(patientId, outputStrategy), 1, TimeUnit.SECONDS);
@@ -177,6 +195,11 @@ public class HealthDataSimulator {
             scheduleTask(() -> bloodPressureDataGenerator.generate(patientId, outputStrategy), 1, TimeUnit.MINUTES);
             scheduleTask(() -> bloodLevelsDataGenerator.generate(patientId, outputStrategy), 2, TimeUnit.MINUTES);
             scheduleTask(() -> alertGenerator.generate(patientId, outputStrategy), 20, TimeUnit.SECONDS);
+
+            // Schedule the alert evaluation using different strategies
+            scheduleTask(() -> evaluateAlerts(patientId, new BloodPressureStrategy(), new BloodPressureAlertFactory()), 1, TimeUnit.MINUTES);
+            scheduleTask(() -> evaluateAlerts(patientId, new HeartRateStrategy(), new ECGAlertFactory()), 1, TimeUnit.MINUTES);
+            scheduleTask(() -> evaluateAlerts(patientId, new OxygenSaturationStrategy(), new BloodOxygenAlertFactory()), 1, TimeUnit.MINUTES);
         }
     }
 
@@ -189,5 +212,20 @@ public class HealthDataSimulator {
      */
     private static void scheduleTask(Runnable task, long period, TimeUnit timeUnit) {
         scheduler.scheduleAtFixedRate(task, random.nextInt(5), period, timeUnit);
+    }
+
+    /**
+     * Evaluates alerts for a given patient using the specified strategy and alert factory.
+     *
+     * @param patientId the identifier of the patient
+     * @param strategy the alert strategy to use
+     * @param alertFactory the alert factory to use
+     */
+    private static void evaluateAlerts(int patientId, AlertStrategy strategy, AlertFactory alertFactory) {
+        alertGenerator.setAlertStrategy(strategy);
+        Patient patient = dataStorage.getPatient(patientId);
+        if (patient != null) {
+            alertGenerator.evaluateData(patient, alertFactory);
+        }
     }
 }

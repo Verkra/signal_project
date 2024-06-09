@@ -7,13 +7,23 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import com.alerts.AlertGenerator;
+import com.alerts.BloodPressureAlertFactory;
 
 public class DataStorage {
     private static final Logger logger = Logger.getLogger(DataStorage.class.getName());
     private ConcurrentHashMap<Integer, Patient> patientMap;
 
-    public DataStorage() {
+    private static DataStorage instance;
+
+    private DataStorage() {
         this.patientMap = new ConcurrentHashMap<>();
+    }
+
+    public static synchronized DataStorage getInstance() {
+        if (instance == null) {
+            instance = new DataStorage();
+        }
+        return instance;
     }
 
     public void addPatientData(int patientId, double measurementValue, String recordType, long timestamp) {
@@ -31,6 +41,10 @@ public class DataStorage {
         patient.addRecord(measurementValue, recordType, timestamp);
     }
 
+    public Patient getPatient(int patientId) {
+        return patientMap.get(patientId);
+    }
+
     public List<PatientRecord> getRecords(int patientId, long startTime, long endTime, String recordType) {
         Patient patient = patientMap.get(patientId);
         if (patient != null) {
@@ -44,7 +58,7 @@ public class DataStorage {
     }
 
     public static void main(String[] args) {
-        DataStorage storage = new DataStorage();
+        DataStorage storage = DataStorage.getInstance();
         WebSocketDataReader reader = new WebSocketDataReader(URI.create("ws://localhost:8080"), storage);
         reader.startReading(storage);
 
@@ -59,7 +73,7 @@ public class DataStorage {
         AlertGenerator alertGenerator = new AlertGenerator(storage);
 
         for (Patient patient : storage.getAllPatients()) {
-            alertGenerator.evaluateData(patient);
+            alertGenerator.evaluateData(patient, new BloodPressureAlertFactory()); // Pass the appropriate factory here
         }
     }
 }

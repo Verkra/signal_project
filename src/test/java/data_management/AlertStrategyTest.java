@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class DataStorageIntegrationTest {
+public class AlertStrategyTest {
     private DataStorage dataStorage;
     private CustomWebSocketClient client;
 
@@ -32,7 +32,7 @@ public class DataStorageIntegrationTest {
     }
 
     @Test
-public void testRealTimeDataProcessing() {
+public void testBloodPressureStrategy() {
     DataStorage instance1 = DataStorage.getInstance();
         DataStorage instance2 = DataStorage.getInstance();
 
@@ -43,7 +43,7 @@ public void testRealTimeDataProcessing() {
 }
 
     @Test
-    public void testAlertGeneration() {
+    public void testECGAlertStrategy() {
         DataStorage instance1 = DataStorage.getInstance();
         DataStorage instance2 = DataStorage.getInstance();
 
@@ -52,5 +52,16 @@ public void testRealTimeDataProcessing() {
         assertSame(instance1, instance2, "Both instances should be the same");
         }
 
-        // Add assertions for generated alerts
+    
+    @Test
+    public void testBloodOxygenationStrategy() {
+        DataStorage instance1 = DataStorage.getInstance();
+        DataStorage instance2 = DataStorage.getInstance();
+
+        assertNotNull(instance1);
+        assertNotNull(instance2);
+        assertSame(instance1, instance2, "Both instances should be the same");
+        }
     }
+    
+

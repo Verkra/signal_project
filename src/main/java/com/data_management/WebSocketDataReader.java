@@ -6,10 +6,20 @@ import org.java_websocket.handshake.ServerHandshake;
 import java.net.URI;
 import java.util.logging.Logger;
 
+/**
+ * WebSocket-based implementation of DataReader.
+ * Reads patient data from a WebSocket server and stores it in a DataStorage instance.
+ */
 public class WebSocketDataReader extends WebSocketClient implements DataReader {
     private static final Logger logger = Logger.getLogger(WebSocketDataReader.class.getName());
     private DataStorage dataStorage;
 
+    /**
+     * Constructs a WebSocketDataReader with the specified server URI and DataStorage.
+     *
+     * @param serverUri   the URI of the WebSocket server
+     * @param dataStorage the DataStorage instance for storing patient data
+     */
     public WebSocketDataReader(URI serverUri, DataStorage dataStorage) {
         super(serverUri);
         this.dataStorage = dataStorage;
